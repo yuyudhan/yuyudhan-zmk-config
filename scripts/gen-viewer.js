@@ -1,21 +1,22 @@
 #!/usr/bin/env node
 // FilePath: scripts/gen-viewer.js
 //
-// Regenerates the `const layers = {...}` data block in keymap-viewer.html from
-// config/corne.keymap so the viewer's key data can't drift from the keymap.
+// Regenerates the `const layers = {...}` data block in `<keymap>-viewer.html` from
+// `config/<keymap>.keymap` so the viewer's key data can't drift from the keymap.
 // Run via `just html`. Requires `keymap` (keymap-drawer 0.23.0) on PATH and node.
 //
 // Only the `const layers` block is rewritten. The HTML shell (CSS, key positions,
 // rendering JS) and `layerDescriptions` are NOT touched. Per-layer icon/color come
 // from METADATA below; friendly labels and color categories come from the maps
 // below. Add new keycodes/macros to those maps (the generator WARNs about unmapped
-// tokens) rather than editing keymap-viewer.html by hand.
+// tokens) rather than editing the viewer HTML by hand.
 
 const fs = require("fs");
 const { execSync } = require("child_process");
 
-const HTML = "keymap-viewer.html";
-const KEYMAP = "config/corne.keymap";
+const KM = process.argv[2] || "yuyudhan-1";
+const HTML = `${KM}-viewer.html`;
+const KEYMAP = `config/${KM}.keymap`;
 const DRAWER_CFG = "config/keymap_drawer.config.yaml";
 
 // --- per-layer presentation metadata (not derivable from the keymap) ---
@@ -123,7 +124,7 @@ function serKey(k){
 const ROWS = [[0,5],[5,10],[10,15],[15,20],[20,25],[25,30],[30,33],[33,36]]; // matches current layout
 function serLayer(name, keys){
   const meta = METADATA[name] || { icon: name[0].toUpperCase(), color: "#888888" };
-  if (!METADATA[name]) warns.push(`no METADATA for layer "${name}" -> add icon/color in scripts/gen-viewer.js and a layerDescriptions entry in keymap-viewer.html`);
+  if (!METADATA[name]) warns.push(`no METADATA for layer "${name}" -> add icon/color in scripts/gen-viewer.js and a layerDescriptions entry in ${HTML}`);
   let s = `  ${name}: {\n    icon: ${esc(meta.icon)}, color: ${esc(meta.color)},\n    keys: [\n`;
   for (const [a,b] of ROWS){
     const slice = keys.slice(a,b).map(serKey).join(",");
@@ -147,6 +148,6 @@ let html = fs.readFileSync(HTML, "utf8");
 const re = /const layers = \{[\s\S]*?\n\};/;
 if (!re.test(html)) { console.error(`FATAL: could not locate \`const layers\` block in ${HTML}`); process.exit(1); }
 const next = html.replace(re, block.replace(/\$/g, "$$$$")); // escape $ for String.replace
-if (next === html) console.log("keymap-viewer.html `layers` already up to date.");
+if (next === html) console.log(`${HTML} \`layers\` already up to date.`);
 else { fs.writeFileSync(HTML, next); console.log(`Regenerated \`const layers\` in ${HTML} (${order.length} layers, ${order.reduce((n,L)=>n+Y[L].length,0)} keys).`); }
 for (const w of warns) console.warn("WARN: " + w);

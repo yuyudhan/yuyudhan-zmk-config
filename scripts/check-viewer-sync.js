@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // FilePath: scripts/check-viewer-sync.js
 
-// Fails (exit 1) if keymap-viewer.html structurally drifts from config/corne.keymap.
+// Fails (exit 1) if `<keymap>-viewer.html` structurally drifts from `config/<keymap>.keymap`.
 // Label-agnostic: never false-positives on styling diffs (RET vs ENTER, CMD vs LGUI, DISP vs EP TOG).
 //
 // Two modes depending on whether `keymap` (keymap-drawer) is on PATH:
@@ -30,15 +30,16 @@ const EXPECTED = {
 };
 
 // ── Load viewer layers (new Function avoids assignment-into-scope eval) ─────────
-const html = fs.readFileSync("keymap-viewer.html", "utf8");
+const KM = process.argv[2] || "yuyudhan-1";
+const html = fs.readFileSync(`${KM}-viewer.html`, "utf8");
 const m = html.match(/const layers = \{[\s\S]*?\n\};/);
-if (!m) { console.error("FAIL: could not locate `const layers` in keymap-viewer.html"); process.exit(1); }
+if (!m) { console.error(`FAIL: could not locate \`const layers\` in ${KM}-viewer.html`); process.exit(1); }
 const layers = new Function("return (" + m[0].replace(/^const layers = /, "").replace(/;\s*$/, "") + ");")();
 
 // ── Try to parse keymap (optional) ──────────────────────────────────────────────
 let counts = null, holds = null;
 try {
-  const yamlText = execSync("keymap parse -z config/corne.keymap", { encoding: "utf8" });
+  const yamlText = execSync(`keymap parse -z config/${KM}.keymap`, { encoding: "utf8" });
   const lines = yamlText.split("\n");
   let inLayers = false, cur = null;
   counts = {}; holds = {};
@@ -58,7 +59,7 @@ try {
   const isMissing = err.code === 127 || err.status === 127 ||
                     /not found|ENOENT|command not found/i.test(String(err.message || err));
   if (!isMissing) {
-    console.error("FAIL: `keymap parse` ran but failed (real parse error — check config/corne.keymap):");
+    console.error(`FAIL: \`keymap parse\` ran but failed (real parse error — check config/${KM}.keymap):`);
     console.error(String(err.message || err));
     process.exit(1);
   }
@@ -104,10 +105,10 @@ if (JSON.stringify(refHrm) !== JSON.stringify(vwHrm))
   errs.push(`BASE home-row-mod positions: ${online ? "keymap" : "expected"} ${JSON.stringify(refHrm)} vs viewer ${JSON.stringify(vwHrm)}`);
 
 if (errs.length) {
-  console.error("keymap-viewer.html is OUT OF SYNC with config/corne.keymap:");
+  console.error(`${KM}-viewer.html is OUT OF SYNC with config/${KM}.keymap:`);
   for (const e of errs) console.error("  - " + e);
-  console.error("Update keymap-viewer.html to match the keymap (see AGENTS.md).");
+  console.error(`Update ${KM}-viewer.html to match the keymap (see AGENTS.md).`);
   process.exit(1);
 }
 const mode = online ? "full keymap diff" : "viewer-internal + fixed-expectation checks";
-console.log(`keymap-viewer.html structural sync OK [${mode}] (${EXPECTED.LAYER_NAMES.length} layers, thumb+HRM layout matches).`);
+console.log(`${KM}-viewer.html structural sync OK [${mode}] (${EXPECTED.LAYER_NAMES.length} layers, thumb+HRM layout matches).`);
