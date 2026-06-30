@@ -13,7 +13,8 @@ ZMK firmware config for a Corne split keyboard (42 keys, 2 halves, wireless via 
 ```
 config/
   corne.conf                      — master keyboard config (behaviour, power)
-  corne.keymap                    — all keybindings and layer definitions
+  yuyudhan-1.keymap               — all keybindings and layer definitions (default keymap)
+  yuyudhan-2.keymap               — second selectable keymap (copy of yuyudhan-1 to diverge)
   west.yml                        — ZMK firmware version pin
   corne.json                      — QMK-style physical-layout JSON (currently unused by the build/viewer tooling)
   boards/shields/corne/
@@ -67,10 +68,10 @@ Each layer concentrates its keys on one hand so the other hand is free to hold t
 
 ## How to change keybindings
 
-1. Open `config/corne.keymap`.
+1. Open `config/<keymap>.keymap` (default `config/yuyudhan-1.keymap`).
 2. Find the layer block by name (e.g. `layer_base`, `layer_nav`).
 3. Edit `&kp KEY` for a plain keypress, `&lt LAYER KEY` for a layer-tap, or `&mt MOD KEY` for a mod-tap.
-4. Run `just build` to compile new `.uf2` images into a timestamped `firmware/<datetime>/` directory.
+4. Run `just build <keymap>` to compile new `.uf2` images into `firmware/<keymap>/<datetime>/`.
 
 For live editing without reflashing, connect the left half via USB and use **ZMK Studio** (web or desktop). Changes made in Studio are saved to the left half's flash and take effect immediately.
 

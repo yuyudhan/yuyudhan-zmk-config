@@ -8,27 +8,30 @@
 > markers below. Everything between those markers is regenerated and overwritten
 > by `npx gitnexus analyze`, so rules placed inside them are lost.
 
-## keymap-viewer.html Must Track the Keymap
+## `<keymap>-viewer.html` Must Track the Keymap
 
-The `layers` data block in `keymap-viewer.html` is **generated** by `just html`
-(`scripts/gen-viewer.js`) from `config/corne.keymap`. After any keymap edit (layers,
-bindings, home-row mods, thumb/layer assignments), run `just html` to regenerate it.
+Each keymap (`yuyudhan-1`, `yuyudhan-2`) has its **own** `<keymap>-viewer.html` and `<keymap>_keymap.svg`; the generator and sync-check operate on whichever keymap is passed (default `yuyudhan-1`).
 
-- **Generated** (run `just html` after any keymap change):
+The `layers` data block in `<keymap>-viewer.html` is **generated** by `just html <keymap>`
+(`scripts/gen-viewer.js`) from the selected keymap (`config/<keymap>.keymap`, default `yuyudhan-1`).
+After any keymap edit (layers, bindings, home-row mods, thumb/layer assignments), run `just html <keymap>`
+to regenerate that keymap's viewer.
+
+- **Generated** (run `just html <keymap>` after any keymap change):
   - The `const layers` block — each key's tap (`t`), hold (`h`), and `type` for all layers.
 - **Hand-maintained** (NOT touched by `just html`):
   - The HTML/CSS shell, key `positions`, and rendering JS.
   - `layerDescriptions` — the sidebar text for each layer.
   - Per-layer icon and color — these live in `METADATA` inside `scripts/gen-viewer.js`
-    (edit there, not in `keymap-viewer.html`).
+    (edit there, not in `<keymap>-viewer.html`).
 - **New keycodes/macros:** add friendly labels and color categories to the `LABELS` /
   type maps in `scripts/gen-viewer.js`. The generator prints a `WARN` for any unmapped
   macro/behavior token — use that as the cue to extend the maps.
 - **Never** hand-edit the `const layers` block — it will be overwritten on the next
-  `just html` run.
-- `just check` (and `just build`) still enforce structural sync via
-  `scripts/check-viewer-sync.js`, which fails if `keymap-viewer.html` structurally
-  drifts from `config/corne.keymap` (layer count, per-layer key count, BASE
+  `just html <keymap>` run.
+- `just check <keymap>` (and `just build <keymap>`) still enforce structural sync via
+  `scripts/check-viewer-sync.js`, which fails if `<keymap>-viewer.html` structurally
+  drifts from `config/<keymap>.keymap` (layer count, per-layer key count, BASE
   thumb-layer order, home-row-mod positions). Labels/glyphs are not checked, so
   styling is free.
 
