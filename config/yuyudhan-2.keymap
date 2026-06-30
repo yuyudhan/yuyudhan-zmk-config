@@ -1,0 +1,514 @@
+// FilePath: config/corne.keymap
+
+/*
+ * Copyright (c) 2020 The ZMK Contributors
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
+// ══════════════════════════════════════════════════════════════════════════════
+//   WHAT IS THIS FILE?
+//
+//   This is the keymap for a Corne split keyboard running ZMK firmware.
+//   It is written in Devicetree source format (.keymap / .dtsi): a structured
+//   text language that ZMK compiles into firmware you flash to the keyboard.
+//   You never write raw HID keycodes or register values — you declare what
+//   each key should do and the firmware handles the rest.
+//
+//   LAYOUT PHILOSOPHY — MIRYOKU-STYLE QWERTY
+//
+//   This layout follows the Miryoku philosophy: standard QWERTY alpha keys,
+//   but every home row key doubles as a modifier when held. This is called
+//   "home row mods". The modifier order is GACS (left to right):
+//     A = GUI (⌘/Win)  S = ALT  D = CTRL  F = SHIFT  (left hand)
+//     ' = GUI          L = ALT  K = CTRL  J = SHIFT  (right hand, mirrored)
+//   Tap the key quickly → you get the letter. Hold it for ~200 ms → modifier.
+//   This keeps your fingers on the home row and eliminates pinky stretches.
+//
+//   LAYERS — HOW TO ACCESS ALTERNATE KEY SETS
+//
+//   A "layer" is an overlay that replaces some or all keys with different
+//   outputs. Layers are activated by holding a thumb key. When you release
+//   the thumb, the keyboard returns to BASE. There are 7 layers total:
+//
+//     Layer 0  BASE   — Always active. QWERTY + home row mods.
+//     Layer 1  NAV    — Vim arrows (HJKL), Home/End, clipboard. Hold: SPACE.
+//     Layer 2  NUM    — Numpad (7-8-9 / 4-5-6 / 1-2-3), brackets. Hold: BSPC.
+//     Layer 3  MEDIA  — Volume, brightness, Bluetooth, lock/BT-clear/logout. Hold: ESC.
+//     Layer 4  SYM    — Symbols: { } & * ( ) : $ % ^ ~ ! @ # |. Hold: ENTER.
+//     Layer 5  FUN    — Function keys F1–F12, Print Screen, Pause. Hold: DEL.
+//     Layer 6  MOUSE  — Mouse cursor, scroll wheel, mouse buttons. Hold: TAB.
+// ══════════════════════════════════════════════════════════════════════════════
+
+// ──────────────────────────────────────────────────────────────────────────────
+//   Corne Keymap — Miryoku-inspired QWERTY with home row mods
+// ──────────────────────────────────────────────────────────────────────────────
+//
+//   Philosophy: keep every finger on or near the home row at all times.
+//   Modifiers are embedded in the home row alpha keys (hold = modifier,
+//   tap = letter). Layers activate via held thumb keys.
+//
+//   Miryoku-style layout — QWERTY base, vim arrows (HJKL), GACS home row mods
+//   Adapted from TOTEM config for Corne (42-key hardware, configured for 36-key use)
+//
+//   Layer 0: BASE    — QWERTY + home row mods
+//   Layer 1: NAV     — vim arrows, clipboard, nav (hold SPACE)
+//   Layer 2: NUM     — numpad left hand (hold BSPC)
+//   Layer 3: MEDIA   — media, BT, brightness, lock/BT-clear/logout (hold ESC)
+//   Layer 4: SYM     — symbols left hand (hold ENTER)
+//   Layer 5: FUN     — function keys left hand (hold DEL)
+//   Layer 6: MOUSE   — mouse movement, scroll, buttons (hold TAB)
+
+// ──────────────────────────────────────────────────────────────────────────────
+//   Includes
+// ──────────────────────────────────────────────────────────────────────────────
+
+// Core ZMK behavior definitions: &mt (mod-tap) and &lt (layer-tap) are
+// the built-in behaviors referenced in this file.
+#include <behaviors.dtsi>
+
+// Bluetooth control bindings: BT_SEL n (select profile); the MEDIA layer
+// uses BT_SEL 0–3 (4 profiles).
+#include <dt-bindings/zmk/bt.h>
+
+// Standard HID key codes for every alpha, number, modifier, symbol, and special
+// key (TAB, ESC, LGUI, LSHFT, etc.). Required for &kp and &mt bindings.
+#include <dt-bindings/zmk/keys.h>
+
+// Output selector bindings (OUT_TOG / OUT_USB / OUT_BLE): switch the active HID
+// output between the USB cable and a Bluetooth profile on the fly.
+#include <dt-bindings/zmk/outputs.h>
+
+// Pointing device bindings: mmv (mouse move), msc (scroll), mkp (mouse button).
+// Requires CONFIG_ZMK_POINTING=y in corne.conf and a recent ZMK build.
+#include <dt-bindings/zmk/pointing.h>
+
+
+// ──────────────────────────────────────────────────────────────────────────────
+//   Layer index constants
+// ──────────────────────────────────────────────────────────────────────────────
+//
+//   ZMK layer numbers are plain integers (0-based). Naming them here keeps the
+//   keymap readable: &lt NAV SPACE is immediately clear, while &lt 1 SPACE is
+//   not. Adding a new layer only requires inserting one #define — no need to
+//   audit every binding that references a raw number.
+
+// Always-active base typing layer at the bottom of the layer stack.
+#define BASE  0
+
+// Navigation: vim-style cursor movement and clipboard (thumb: hold SPACE).
+#define NAV   1
+
+// Numbers: columnar numpad on the left hand (thumb: hold BSPC).
+#define NUM   2
+
+// Media & connectivity: volume, playback, Bluetooth (thumb: hold ESC).
+#define MEDIA 3
+
+// Symbols: programmer symbol set on the left hand (thumb: hold ENTER).
+#define SYM   4
+
+// Function keys: F1–F12 on the left hand (thumb: hold DEL).
+#define FUN   5
+
+// Mouse: pointer movement and scroll on the right hand (thumb: hold TAB).
+#define MOUSE 6
+
+// ──────────────────────────────────────────────────────────────────────────────
+//   &mt — Mod-Tap: global behaviour overrides for home row modifiers
+// ──────────────────────────────────────────────────────────────────────────────
+//
+//   Usage: &mt MODIFIER letter_key
+//   Hold → sends the modifier. Tap → sends the letter.
+//
+//   These settings are tuned for comfortable home row mod usage: letters come
+//   out reliably during fast typing, modifiers fire on deliberate holds only.
+
+&mt {
+    // "tap-preferred" resolves ambiguous press+release sequences in favour of
+    // the tap (letter) output. If you press the mod-tap key and release it
+    // before tapping-term-ms elapses — even while another key is held — ZMK
+    // records a tap. The modifier only activates on a sustained hold with no
+    // release during the window. This prevents accidental modifier firing when
+    // rolling quickly across the home row.
+    flavor = "tap-preferred";
+
+    // The hold/tap decision window in milliseconds. Holding the key for longer
+    // than 200 ms with no release triggers the modifier. Shorter than this and
+    // tap-preferred kicks in. 200 ms is a comfortable middle ground: long enough
+    // to avoid misfires while touch-typing, short enough that intentional holds
+    // feel instant.
+    tapping-term-ms = <200>;
+
+    // If the same mod-tap key is pressed again within 175 ms of its previous
+    // release, ZMK treats the second press as a tap regardless of how long it is
+    // held. This enables fast key-repeat (tap once, then hold to repeat the
+    // letter) without accidentally engaging the modifier on the second press.
+    quick-tap-ms = <175>;
+
+    // The keyboard must have been idle for at least 150 ms before a hold on
+    // this key can activate the modifier. This is the most important setting for
+    // avoiding phantom modifiers: when typing quickly, the natural pause before
+    // intentionally reaching for a modifier is longer than 150 ms, so legitimate
+    // mods still fire. But a home row key pressed immediately after another key
+    // (a common typing roll) will never accidentally trigger a modifier.
+    require-prior-idle-ms = <150>;
+};
+
+// ──────────────────────────────────────────────────────────────────────────────
+//   &lt — Layer-Tap: global behaviour overrides for thumb cluster keys
+// ──────────────────────────────────────────────────────────────────────────────
+//
+//   Usage: &lt LAYER_NUMBER key
+//   Hold → activates the named layer. Tap → sends the key.
+//
+//   Uses "balanced" flavour (unlike &mt's "tap-preferred") because thumb-held
+//   layer switches usually overlap with other keys being pressed on the opposite
+//   hand. Balanced correctly resolves these overlapping chords as a layer hold.
+
+&lt {
+    // "balanced" resolves the hold/tap decision when another key is both pressed
+    // AND released inside the tapping-term window. In that case ZMK decides it
+    // was a layer hold — you get the layer output for that overlapping key.
+    // This makes "thumb down → finger presses key → thumb up" sequences reliable
+    // at any typing speed, which is the primary usage pattern for layer-tap keys.
+    flavor = "balanced";
+
+    // Same 200 ms window as &mt for a consistent feel across the whole keyboard.
+    // Thumb holds for layer access feel snappy at this value.
+    tapping-term-ms = <200>;
+
+    // Enables tap-then-hold to repeat the tapped key (e.g. tap BSPC, then hold
+    // BSPC again to keep deleting). Without this, the second hold would activate
+    // the NUM layer instead of repeating backspace.
+    quick-tap-ms = <175>;
+};
+
+/ {
+
+    behaviors {
+        display_tog: disp_tog {
+            compatible = "zmk,behavior-display-toggle";
+            #binding-cells = <0>;
+        };
+    };
+
+    keymap {
+        compatible = "zmk,keymap";
+
+        // ──────────────────────────────────────────────────────────────────────
+        //   Layer 0: BASE — QWERTY with GACS home row mods
+        // ──────────────────────────────────────────────────────────────────────
+        //
+        //   The default layer — always active unless a thumb hold overrides it.
+        //   Standard QWERTY alpha layout with no surprises to the fingers, but
+        //   every home row key doubles as a modifier on hold.
+        //
+        //   Home row mods follow the GACS order (left to right on each hand):
+        //     Left hand:   A = GUI (⌘/Win)   S = Alt   D = Ctrl   F = Shift
+        //     Right hand:  J = Shift   K = Ctrl   L = Alt   ' = GUI (⌘/Win)
+        //   GACS places Shift on the index finger (closest to the centre)
+        //   because it is by far the most-used modifier. GUI/Win sits on the
+        //   pinky because it is the least frequently used in isolation.
+        //
+        //   Thumb cluster — hold activates the layer, tap sends the key:
+        //     Left:   [MEDIA/ESC]  [NAV/SPACE]  [MOUSE/TAB]
+        //     Right:  [SYM/ENTER]  [NUM/BSPC]   [FUN/DEL]
+        //
+        // ┌─────────┬─────────┬─────────┬─────────┬─────────┐   ┌─────────┬─────────┬─────────┬─────────┬─────────┐
+        // │    Q    │    W    │    E    │    R    │    T    │   │    Y    │    U    │    I    │    O    │    P    │
+        // ├─────────┼─────────┼─────────┼─────────┼─────────┤   ├─────────┼─────────┼─────────┼─────────┼─────────┤
+        // │  GUI/A  │  ALT/S  │ CTRL/D  │ SHFT/F  │    G    │   │    H    │ SHFT/J  │ CTRL/K  │  ALT/L  │  GUI/'  │
+        // ├─────────┼─────────┼─────────┼─────────┼─────────┤   ├─────────┼─────────┼─────────┼─────────┼─────────┤
+        // │    Z    │    X    │    C    │    V    │    B    │   │    N    │    M    │    ,    │    .    │    /    │
+        // └─────────┴─────────┴─────────┴─────────┴─────────┘   └─────────┴─────────┴─────────┴─────────┴─────────┘
+        //                               ┌──────────────┬──────────────┬──────────────┐   ┌──────────────┬──────────────┬──────────────┐
+        //                               │  MEDIA / ESC │  NAV / SPC  │ MOUSE / TAB  │   │  SYM / RET   │  NUM / BSPC  │  FUN / DEL   │
+        //                               └──────────────┴──────────────┴──────────────┘   └──────────────┴──────────────┴──────────────┘
+        base_layer {
+            display-name = "BASE";
+            bindings = <
+&kp Q       &kp W       &kp E         &kp R         &kp T          &kp Y       &kp U         &kp I         &kp O        &kp P
+&mt LGUI A  &mt LALT S  &mt LCTRL D   &mt LSHFT F   &kp G          &kp H       &mt RSHFT J   &mt RCTRL K   &mt RALT L   &mt RGUI SQT
+&kp Z       &kp X       &kp C         &kp V         &kp B          &kp N       &kp M         &kp COMMA     &kp DOT      &kp FSLH
+                        &lt MEDIA ESC &lt NAV SPACE &lt MOUSE TAB  &lt SYM RET &lt NUM BSPC  &lt FUN DEL
+            >;
+        };
+
+        // ──────────────────────────────────────────────────────────────────────
+        //   Layer 1: NAV — Navigation and clipboard (thumb: hold SPACE)
+        // ──────────────────────────────────────────────────────────────────────
+        //
+        //   Activated by holding the centre-left thumb key. Tap still sends Space.
+        //
+        //   Right hand — navigation cluster:
+        //     Top row:    Redo (⌘⇧Z)  Paste (⌘V)  Copy (⌘C)  Cut (⌘X)  Undo (⌘Z)
+        //       Clipboard shortcuts fill the top row so they're reachable while
+        //       the left thumb holds NAV and the right hand navigates.
+        //     Home row:   ← ↓ ↑ → on H J K L (vim arrow positions), then Caps Lock
+        //       Pure muscle memory transfer from vim/tmux to system-level navigation.
+        //     Bottom row: Home  PgDn  PgUp  End  Insert
+        //       Extends the arrow cluster downward in the same HJKL columns.
+        //
+        //   Left hand — bare modifiers on the home row (no alpha output):
+        //     GUI  Alt  Ctrl  Shift
+        //     Hold any of these while the right hand navigates to select text
+        //     (Shift+arrows), jump words (Alt+arrows), or invoke shortcuts.
+        //
+        //   Thumb right: RET, BSPC, DEL remain active so you can confirm,
+        //   delete, or backspace while navigating — no need to release the layer.
+        //
+        // ┌─────────┬─────────┬─────────┬─────────┬─────────┐   ┌─────────┬─────────┬─────────┬─────────┬─────────┐
+        // │   ---   │   ---   │   ---   │   ---   │   ---   │   │  REDO   │  PASTE  │  COPY   │   CUT   │  UNDO   │
+        // ├─────────┼─────────┼─────────┼─────────┼─────────┤   ├─────────┼─────────┼─────────┼─────────┼─────────┤
+        // │   GUI   │   ALT   │  CTRL   │  SHFT   │   ---   │   │  LEFT   │  DOWN   │   UP    │  RIGHT  │  CAPS   │
+        // ├─────────┼─────────┼─────────┼─────────┼─────────┤   ├─────────┼─────────┼─────────┼─────────┼─────────┤
+        // │   ---   │   ---   │   ---   │   ---   │   ---   │   │  HOME   │  PGDN   │  PGUP   │   END   │   INS   │
+        // └─────────┴─────────┴─────────┴─────────┴─────────┘   └─────────┴─────────┴─────────┴─────────┴─────────┘
+        //                               ┌──────────────┬──────────────┬──────────────┐   ┌──────────────┬──────────────┬──────────────┐
+        //                               │     ---      │   [HELD]     │     ---      │   │     RET      │     BSPC     │     DEL      │
+        //                               └──────────────┴──────────────┴──────────────┘   └──────────────┴──────────────┴──────────────┘
+        nav_layer {
+            display-name = "NAV";
+            bindings = <
+&none       &none       &none         &none         &none          &kp LG(LS(Z)) &kp LG(V)   &kp LG(C)     &kp LG(X)    &kp LG(Z)
+&kp LGUI    &kp LALT    &kp LCTRL     &kp LSHFT     &none          &kp LEFT    &kp DOWN      &kp UP        &kp RIGHT    &kp CAPS
+&none       &none       &none         &none         &none          &kp HOME    &kp PG_DN     &kp PG_UP     &kp END      &kp INS
+                        &none         &none         &none          &kp RET     &kp BSPC      &kp DEL
+            >;
+        };
+
+        // ──────────────────────────────────────────────────────────────────────
+        //   Layer 2: NUM — Columnar numpad (thumb: hold BSPC)
+        // ──────────────────────────────────────────────────────────────────────
+        //
+        //   Activated by holding the centre-right thumb key. Tap still sends BSPC.
+        //
+        //   Left hand — numpad layout across three rows:
+        //     Top row:    [  7  8  9  ]
+        //     Home row:   ;  4  5  6  =
+        //     Bottom row: `  1  2  3  \
+        //   The digit columns match a hardware numpad's layout (7-8-9 on top,
+        //   then 4-5-6, then 1-2-3) so numpad muscle memory transfers directly.
+        //   Flanking characters [ ] ; = ` \ are the punctuation marks most
+        //   commonly needed alongside numbers in code (array indexing, assignment,
+        //   bitwise ops, path separators).
+        //
+        //   Thumb left: .  0  -
+        //   Decimal point, zero, and minus complete the numpad; these three keys
+        //   let you type any number or simple arithmetic expression without
+        //   shifting the left hand off its home position.
+        //
+        //   Right hand — held modifiers on the home row:
+        //     Shift  Ctrl  Alt  GUI
+        //   Allows modifier+number shortcuts (e.g. ⌘1–9 for tabs/windows) and
+        //   Shift+number for the shifted symbol set on non-US layouts.
+        //
+        // ┌─────────┬─────────┬─────────┬─────────┬─────────┐   ┌─────────┬─────────┬─────────┬─────────┬─────────┐
+        // │    [    │    7    │    8    │    9    │    ]    │   │   ---   │   ---   │   ---   │   ---   │   ---   │
+        // ├─────────┼─────────┼─────────┼─────────┼─────────┤   ├─────────┼─────────┼─────────┼─────────┼─────────┤
+        // │    ;    │    4    │    5    │    6    │    =    │   │   ---   │  SHFT   │  CTRL   │   ALT   │   GUI   │
+        // ├─────────┼─────────┼─────────┼─────────┼─────────┤   ├─────────┼─────────┼─────────┼─────────┼─────────┤
+        // │    `    │    1    │    2    │    3    │    \    │   │   ---   │   ---   │   ---   │   ---   │   ---   │
+        // └─────────┴─────────┴─────────┴─────────┴─────────┘   └─────────┴─────────┴─────────┴─────────┴─────────┘
+        //                               ┌──────────────┬──────────────┬──────────────┐   ┌──────────────┬──────────────┬──────────────┐
+        //                               │      .       │      0       │      -       │   │     ---      │   [HELD]     │     ---      │
+        //                               └──────────────┴──────────────┴──────────────┘   └──────────────┴──────────────┴──────────────┘
+        num_layer {
+            display-name = "NUM";
+            bindings = <
+&kp LBKT    &kp N7      &kp N8        &kp N9        &kp RBKT       &none       &none         &none         &none        &none
+&kp SEMI    &kp N4      &kp N5        &kp N6        &kp EQUAL      &none       &kp RSHFT     &kp RCTRL     &kp RALT     &kp RGUI
+&kp GRAVE   &kp N1      &kp N2        &kp N3        &kp BSLH       &none       &none         &none         &none        &none
+                        &kp DOT       &kp N0        &kp MINUS      &none       &none         &none
+            >;
+        };
+
+        // ──────────────────────────────────────────────────────────────────────
+        //   Layer 3: MEDIA — Media, Bluetooth, Power (thumb: hold ESC)
+        // ──────────────────────────────────────────────────────────────────────
+        //
+        //   Activated by holding the leftmost left-thumb key. Tap still sends ESC.
+        //   This is the "system settings" layer — everything that changes how the
+        //   keyboard behaves or what it connects to lives here.
+        //
+        //   Right hand — top row: session + screen controls, inner → outer:
+        //     LOCK  (⌃⌘Q)     — lock the screen
+        //     BRI_DN / BRI_UP — screen brightness, above the C_VOL_DN / C_VOL_UP keys
+        //     BT_CLR          — clear the bond for the currently selected Bluetooth profile (re-pair that profile)
+        //     LOGOUT (⇧⌘Q)    — log out (shows the macOS logout dialog)
+        //
+        //   Right hand — home row (system-level controls):
+        //     DISP_TOG — toggle OLED display on/off (BLANK_ON_IDLE=n makes this the sole owner)
+        //     C_VOL_DN — volume down
+        //     C_VOL_UP — volume up
+        //     C_PREV   — previous track
+        //     C_NEXT   — next track
+        //
+        //   Right hand — bottom row (Bluetooth and output):
+        //     OUT_TOG    — toggle between USB and Bluetooth HID output
+        //     BT_SEL 0–3 — switch the active Bluetooth profile (0 = first paired device)
+        //
+        //   Thumb right: Stop  Play/Pause  Mute — transport controls under the right thumb.
+        //   Left hand: bare held modifiers (same pattern as NAV/NUM).
+        //
+        // ┌─────────┬─────────┬─────────┬─────────┬─────────┐   ┌─────────┬─────────┬─────────┬─────────┬─────────┐
+        // │   ---   │   ---   │   ---   │   ---   │   ---   │   │  LOCK   │ BRI_DN  │ BRI_UP  │ BT_CLR  │ LOGOUT  │
+        // ├─────────┼─────────┼─────────┼─────────┼─────────┤   ├─────────┼─────────┼─────────┼─────────┼─────────┤
+        // │   GUI   │   ALT   │  CTRL   │  SHFT   │   ---   │   │DISP_TOG │ VOL_DN  │ VOL_UP  │ C_PREV  │ C_NEXT  │
+        // ├─────────┼─────────┼─────────┼─────────┼─────────┤   ├─────────┼─────────┼─────────┼─────────┼─────────┤
+        // │   ---   │   ---   │   ---   │   ---   │   ---   │   │OUT_TOG  │  BT 0   │  BT 1   │  BT 2   │  BT 3   │
+        // └─────────┴─────────┴─────────┴─────────┴─────────┘   └─────────┴─────────┴─────────┴─────────┴─────────┘
+        //                               ┌──────────────┬──────────────┬──────────────┐   ┌──────────────┬──────────────┬──────────────┐
+        //                               │   [HELD]     │     ---      │     ---      │   │     STOP     │  PLAY/PAUSE  │     MUTE     │
+        //                               └──────────────┴──────────────┴──────────────┘   └──────────────┴──────────────┴──────────────┘
+        media_layer {
+            display-name = "MEDIA";
+            bindings = <
+&none       &none       &none         &none         &none          &kp LC(LG(Q))  &kp C_BRI_DN   &kp C_BRI_UP   &bt BT_CLR     &kp LS(LG(Q))
+&kp LGUI    &kp LALT    &kp LCTRL     &kp LSHFT     &none          &display_tog   &kp C_VOL_DN   &kp C_VOL_UP   &kp C_PREV   &kp C_NEXT
+&none       &none       &none         &none         &none          &out OUT_TOG &bt BT_SEL 0  &bt BT_SEL 1  &bt BT_SEL 2 &bt BT_SEL 3
+                        &none         &none         &none          &kp C_STOP  &kp C_PP      &kp C_MUTE
+            >;
+        };
+
+        // ──────────────────────────────────────────────────────────────────────
+        //   Layer 4: SYM — Programmer symbols (thumb: hold ENTER)
+        // ──────────────────────────────────────────────────────────────────────
+        //
+        //   Activated by holding the leftmost right-thumb key. Tap still sends Enter.
+        //
+        //   Left hand — all symbols, arranged in three rows mirroring NUM's layout:
+        //     Top row:    {  &  *  (  }
+        //       Curly braces bracket the row (common in all C-family and shell code).
+        //       Inner keys carry the "top-row shifted" symbols: & * (
+        //     Home row:   :  $  %  ^  +
+        //       Colon on the pinky mirrors ; from NUM — : and ; are paired opposites.
+        //       Dollar, percent, caret, plus fill in the remaining shifted digits.
+        //     Bottom row: ~  !  @  #  |
+        //       Shell metacharacters and common punctuation: tilde (home dir),
+        //       bang (negation/shebang), at (email/decorator), hash (comment/tag),
+        //       pipe (shell redirect).
+        //
+        //   Thumb left:  (  )  _
+        //     Open paren, close paren, and underscore on the thumb cluster allow
+        //     typing (expression) and snake_case identifiers with thumb + finger
+        //     combos, keeping the left hand free for modifiers if needed.
+        //
+        //   Right hand: held modifiers on the home row (Shift, Ctrl, Alt, GUI).
+        //   Everything else on the right is blank — SYM is a left-hand-only layer.
+        //
+        // ┌─────────┬─────────┬─────────┬─────────┬─────────┐   ┌─────────┬─────────┬─────────┬─────────┬─────────┐
+        // │    {    │    &    │    *    │    (    │    }    │   │   ---   │   ---   │   ---   │   ---   │   ---   │
+        // ├─────────┼─────────┼─────────┼─────────┼─────────┤   ├─────────┼─────────┼─────────┼─────────┼─────────┤
+        // │    :    │    $    │    %    │    ^    │    +    │   │   ---   │  SHFT   │  CTRL   │   ALT   │   GUI   │
+        // ├─────────┼─────────┼─────────┼─────────┼─────────┤   ├─────────┼─────────┼─────────┼─────────┼─────────┤
+        // │    ~    │    !    │    @    │    #    │    |    │   │   ---   │   ---   │   ---   │   ---   │   ---   │
+        // └─────────┴─────────┴─────────┴─────────┴─────────┘   └─────────┴─────────┴─────────┴─────────┴─────────┘
+        //                               ┌──────────────┬──────────────┬──────────────┐   ┌──────────────┬──────────────┬──────────────┐
+        //                               │      (       │      )       │      _       │   │   [HELD]     │     ---      │     ---      │
+        //                               └──────────────┴──────────────┴──────────────┘   └──────────────┴──────────────┴──────────────┘
+        sym_layer {
+            display-name = "SYM";
+            bindings = <
+&kp LBRC    &kp AMPS    &kp ASTRK     &kp LPAR      &kp RBRC       &none       &none         &none         &none        &none
+&kp COLON   &kp DLLR    &kp PRCNT     &kp CARET     &kp PLUS       &none       &kp RSHFT     &kp RCTRL     &kp RALT     &kp RGUI
+&kp TILDE   &kp EXCL    &kp AT        &kp HASH      &kp PIPE       &none       &none         &none         &none        &none
+                        &kp LPAR      &kp RPAR      &kp UNDER      &none       &none         &none
+            >;
+        };
+
+        // ──────────────────────────────────────────────────────────────────────
+        //   Layer 5: FUN — Function keys F1–F12 (thumb: hold DEL)
+        // ──────────────────────────────────────────────────────────────────────
+        //
+        //   Activated by holding the rightmost right-thumb key. Tap still sends DEL.
+        //
+        //   Left hand — F-keys in the same columnar numpad layout as NUM digits:
+        //     Top row:    F12  F7  F8  F9  PSCRN (Print Screen)
+        //     Home row:   F11  F4  F5  F6  SLCK  (Scroll Lock)
+        //     Bottom row: F10  F1  F2  F3  PAUSE_BREAK
+        //   F7–F9, F4–F6, F1–F3 follow the same 7-8-9 / 4-5-6 / 1-2-3 column
+        //   positions as the numpad, so the muscle memory from NUM transfers.
+        //   F10/F11/F12 fill the pinky column (mirroring how a numpad has an
+        //   extra row at the top). PSCRN, SLCK, PAUSE_BREAK occupy the rightmost
+        //   column — the "extra cluster" that traditionally sits beside F-keys.
+        //
+        //   Thumb left: K_APP (context-menu/application key)  SPACE  TAB
+        //     These allow combinations like Alt+F4, Shift+F6, or App+F10
+        //     without needing a second thumb held down.
+        //
+        //   Right hand: held modifiers on the home row (Shift, Ctrl, Alt, GUI).
+        //   All other right-hand keys are blank — FUN is a left-hand-only layer.
+        //
+        // ┌─────────┬─────────┬─────────┬─────────┬─────────┐   ┌─────────┬─────────┬─────────┬─────────┬─────────┐
+        // │   F12   │   F7    │   F8    │   F9    │  PSCRN  │   │   ---   │   ---   │   ---   │   ---   │   ---   │
+        // ├─────────┼─────────┼─────────┼─────────┼─────────┤   ├─────────┼─────────┼─────────┼─────────┼─────────┤
+        // │   F11   │   F4    │   F5    │   F6    │  SLCK   │   │   ---   │  SHFT   │  CTRL   │   ALT   │   GUI   │
+        // ├─────────┼─────────┼─────────┼─────────┼─────────┤   ├─────────┼─────────┼─────────┼─────────┼─────────┤
+        // │   F10   │   F1    │   F2    │   F3    │  PAUSE  │   │   ---   │   ---   │   ---   │   ---   │   ---   │
+        // └─────────┴─────────┴─────────┴─────────┴─────────┘   └─────────┴─────────┴─────────┴─────────┴─────────┘
+        //                               ┌──────────────┬──────────────┬──────────────┐   ┌──────────────┬──────────────┬──────────────┐
+        //                               │    K_APP     │    SPACE     │     TAB      │   │     ---      │     ---      │   [HELD]     │
+        //                               └──────────────┴──────────────┴──────────────┘   └──────────────┴──────────────┴──────────────┘
+        fun_layer {
+            display-name = "FUN";
+            bindings = <
+&kp F12     &kp F7      &kp F8        &kp F9        &kp PSCRN      &none       &none         &none         &none        &none
+&kp F11     &kp F4      &kp F5        &kp F6        &kp SLCK       &none       &kp RSHFT     &kp RCTRL     &kp RALT     &kp RGUI
+&kp F10     &kp F1      &kp F2        &kp F3        &kp PAUSE_BREAK &none      &none         &none         &none        &none
+                        &kp K_APP     &kp SPACE     &kp TAB        &none       &none         &none
+            >;
+        };
+
+        // ──────────────────────────────────────────────────────────────────────
+        //   Layer 6: MOUSE — Pointer movement and scrolling (thumb: hold TAB)
+        // ──────────────────────────────────────────────────────────────────────
+        //
+        //   Activated by holding the rightmost left-thumb key. Tap still sends TAB.
+        //   Requires CONFIG_ZMK_POINTING=y in corne.conf to compile.
+        //
+        //   Right hand — pointer control:
+        //     Home row: mmv (mouse move) LEFT / DOWN / UP / RIGHT on H J K L
+        //       Exactly the same HJKL positions as the NAV layer's arrow keys —
+        //       the directional logic is identical, just controlling the pointer
+        //       instead of the text cursor.
+        //     Bottom row: msc (scroll) SCRL_LEFT / SCRL_DOWN / SCRL_UP / SCRL_RIGHT
+        //       Scroll mirrors the pointer row one row below, same column order.
+        //       Horizontal scroll is included for spreadsheets and wide canvases.
+        //
+        //   Thumb right: mkp (mouse button) LCLK / MCLK / RCLK
+        //     Left, Middle, Right click under the right thumb, mirroring a
+        //     physical mouse: left-click on the inner thumb, middle in the
+        //     centre, right-click on the outer thumb. The right hand can move
+        //     the pointer while the right thumb clicks — no need to lift off
+        //     the layer.
+        //
+        //   Left hand — bare modifiers on the home row (GUI  Alt  Ctrl  Shift):
+        //     Shift+click = extend selection; Ctrl+click = multi-select;
+        //     Cmd+click = open link in new tab. All reachable without releasing
+        //     the MOUSE layer.
+        //
+        //   Top row and remaining keys: all blank — nothing needed there.
+        //
+        // ┌─────────┬─────────┬─────────┬─────────┬─────────┐   ┌─────────┬─────────┬─────────┬─────────┬─────────┐
+        // │   ---   │   ---   │   ---   │   ---   │   ---   │   │   ---   │   ---   │   ---   │   ---   │   ---   │
+        // ├─────────┼─────────┼─────────┼─────────┼─────────┤   ├─────────┼─────────┼─────────┼─────────┼─────────┤
+        // │   GUI   │   ALT   │  CTRL   │  SHFT   │   ---   │   │ M_LEFT  │ M_DOWN  │  M_UP   │ M_RIGHT │   ---   │
+        // ├─────────┼─────────┼─────────┼─────────┼─────────┤   ├─────────┼─────────┼─────────┼─────────┼─────────┤
+        // │   ---   │   ---   │   ---   │   ---   │   ---   │   │ SC_LEFT │ SC_DOWN │  SC_UP  │SC_RIGHT │   ---   │
+        // └─────────┴─────────┴─────────┴─────────┴─────────┘   └─────────┴─────────┴─────────┴─────────┴─────────┘
+        //                               ┌──────────────┬──────────────┬──────────────┐   ┌──────────────┬──────────────┬──────────────┐
+        //                               │     ---      │     ---      │   [HELD]     │   │   LFT CLK    │   MID CLK    │   RGT CLK    │
+        //                               └──────────────┴──────────────┴──────────────┘   └──────────────┴──────────────┴──────────────┘
+        mouse_layer {
+            display-name = "MOUSE";
+            bindings = <
+&none       &none       &none         &none         &none          &none            &none            &none          &none             &none
+&kp LGUI    &kp LALT    &kp LCTRL     &kp LSHFT     &none          &mmv MOVE_LEFT   &mmv MOVE_DOWN   &mmv MOVE_UP   &mmv MOVE_RIGHT   &none
+&none       &none       &none         &none         &none          &msc SCRL_LEFT   &msc SCRL_DOWN   &msc SCRL_UP   &msc SCRL_RIGHT   &none
+                        &none         &none         &none          &mkp LCLK        &mkp MCLK        &mkp RCLK
+            >;
+        };
+    };
+};
