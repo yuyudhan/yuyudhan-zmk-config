@@ -6,34 +6,35 @@
 default:
     @just --list
 
-# Build firmware (default: all), verify keymap-viewer.html sync, then regenerate corne_keymap.svg.
-# e.g. `just build` or `just build left right`
+# Build firmware for a keymap (default yuyudhan-1, default all targets), verify that
+# keymap's viewer sync, then regenerate its SVG.
+# e.g. `just build`  |  `just build yuyudhan-2`  |  `just build yuyudhan-2 left right`
 # Targets: left right left_view right_view reset
-build *targets:
-    bash build.sh {{targets}}
+build keymap="yuyudhan-1" *targets:
+    bash build.sh {{keymap}} {{targets}}
     if command -v keymap >/dev/null 2>&1; then \
-      if command -v node >/dev/null 2>&1; then node scripts/check-viewer-sync.js || echo "==> keymap-viewer.html is OUT OF SYNC with config/corne.keymap (see above); update it per AGENTS.md"; else echo "==> node not installed; skipping keymap-viewer.html sync check"; fi; \
-      make -B svg || echo "==> SVG generation failed (see above); firmware is fine"; \
+      if command -v node >/dev/null 2>&1; then node scripts/check-viewer-sync.js {{keymap}} || echo "==> {{keymap}}-viewer.html is OUT OF SYNC with config/{{keymap}}.keymap (see above); update it per AGENTS.md"; else echo "==> node not installed; skipping viewer sync check"; fi; \
+      make -B svg KEYMAP=config/{{keymap}}.keymap || echo "==> SVG generation failed (see above); firmware is fine"; \
     else echo "==> keymap-drawer not installed; run: pipx install --python python3.12 keymap-drawer==0.23.0"; fi
 
-# Flash the newest built .uf2 onto a mounted NICENANO bootloader drive.
+# Flash the newest built .uf2 for a keymap onto a mounted NICENANO bootloader drive.
 # Double-tap the reset button on the half first so it mounts as /Volumes/NICENANO.
-# e.g. `just flash left` or `just flash right`
+# e.g. `just flash yuyudhan-1 left`   (both args required — flashing is destructive)
 # Targets: left right left_view right_view reset
-flash target:
-    bash flash.sh {{target}}
+flash keymap target:
+    bash flash.sh {{keymap}} {{target}}
 
-# Check keymap-viewer.html is structurally in sync with config/corne.keymap
-check:
-    node scripts/check-viewer-sync.js
+# Check a keymap's viewer HTML is structurally in sync with its keymap (default yuyudhan-1)
+check keymap="yuyudhan-1":
+    node scripts/check-viewer-sync.js {{keymap}}
 
-# Regenerate the keymap-viewer.html `layers` data block from config/corne.keymap
-html:
-    node scripts/gen-viewer.js
+# Regenerate a keymap's viewer `layers` data block (default yuyudhan-1)
+html keymap="yuyudhan-1":
+    node scripts/gen-viewer.js {{keymap}}
 
-# Regenerate corne_keymap.svg from config/corne.keymap (requires keymap-drawer: make install)
-svg:
-    make svg
+# Regenerate a keymap's SVG (default yuyudhan-1; requires keymap-drawer: make install)
+svg keymap="yuyudhan-1":
+    make svg KEYMAP=config/{{keymap}}.keymap
 
 # Remove the local west workspace and build cache (keeps firmware/)
 clean:

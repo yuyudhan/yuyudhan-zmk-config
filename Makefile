@@ -14,12 +14,12 @@
 #   make svg KEYMAP=config/my_board.keymap OUT_DIR=build
 
 # --- Configuration (override these for different keyboards) ---
-KEYMAP      ?= config/corne.keymap
+KEYMAP      ?= config/yuyudhan-1.keymap
 OUT_DIR     ?= .
 BOARD_NAME  ?= $(basename $(notdir $(KEYMAP)))
 SVG_FILE    ?= $(OUT_DIR)/$(BOARD_NAME)_keymap.svg
 YAML_FILE   ?= /tmp/$(BOARD_NAME)_keymap.yaml
-HTML_FILE   ?= $(OUT_DIR)/keymap-viewer.html
+HTML_FILE   ?= $(OUT_DIR)/$(BOARD_NAME)-viewer.html
 BROWSER     ?= Google Chrome
 
 # --- Python / pip detection ---
