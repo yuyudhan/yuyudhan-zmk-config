@@ -16,6 +16,13 @@ build *targets:
       make -B svg || echo "==> SVG generation failed (see above); firmware is fine"; \
     else echo "==> keymap-drawer not installed; run: pipx install --python python3.12 keymap-drawer==0.23.0"; fi
 
+# Flash the newest built .uf2 onto a mounted NICENANO bootloader drive.
+# Double-tap the reset button on the half first so it mounts as /Volumes/NICENANO.
+# e.g. `just flash left` or `just flash right`
+# Targets: left right left_view right_view reset
+flash target:
+    bash flash.sh {{target}}
+
 # Check keymap-viewer.html is structurally in sync with config/corne.keymap
 check:
     node scripts/check-viewer-sync.js

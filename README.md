@@ -51,6 +51,9 @@ Targets: `left` `right` `left_view` `right_view` `reset`. Outputs land in a time
 2. Drag the matching `.uf2` from the newest `firmware/<datetime>/` directory onto it; it reboots automatically.
 3. Repeat for the other half. Reflash **both** halves after any `config/` change.
 
+Or run `just flash left` (targets: `left right left_view right_view reset`) once a half is
+mounted as `NICENANO`; it copies the newest matching `.uf2` from `firmware/` automatically.
+
 ## Regenerate Keymap SVG
 
 ```sh
