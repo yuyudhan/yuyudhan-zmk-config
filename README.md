@@ -44,11 +44,11 @@ just clean                         # wipe west workspace + build cache
 ```
 
 The **first positional arg is the keymap** (default `yuyudhan-1`); targets follow.
-`just build` also regenerates that keymap's `<keymap>_keymap.svg` and warns if `<keymap>-viewer.html` has drifted.
+`just build` also regenerates that keymap's `<keymap>_keymap.svg` and warns if `<keymap>-viewer.html` has drifted, and copies both into the build's `firmware/<keymap>/<datetime>/` directory alongside the `.uf2`s.
 
 Targets: `left` `right` `left_view` `right_view` `reset`. Outputs land in `firmware/<keymap>/<datetime>/`
 (e.g. `firmware/yuyudhan-1/2026-06-26_14-30-05/`), **gitignored — not committed**, containing
-`corne_left.uf2`, `corne_right.uf2`, `corne_left_nice_view.uf2`, `corne_right_nice_view.uf2`, `settings_reset.uf2`.
+`corne_left.uf2`, `corne_right.uf2`, `corne_left_nice_view.uf2`, `corne_right_nice_view.uf2`, `settings_reset.uf2`. When keymap-drawer is installed the directory also contains `<keymap>_keymap.svg` and `<keymap>-viewer.html` as a snapshot of the keymap visuals at build time.
 
 ### Flash
 
