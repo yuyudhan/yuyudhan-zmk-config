@@ -76,7 +76,7 @@ for key in "$@"; do
   bargs=(-p always -s zmk/app -d "$d" -b "nice_nano//zmk")
   if [ -n "$snippet" ]; then bargs+=(-S "$snippet"); fi
   echo "==> Building $out (shield: $shield)"
-  west build "${bargs[@]}" -- -DZMK_CONFIG=/workspace/config -DKEYMAP_FILE=/workspace/config/$KEYMAP.keymap -DSHIELD="$shield"
+  west build "${bargs[@]}" -- -DZMK_CONFIG=/workspace/config -DKEYMAP_FILE=/workspace/config/$KEYMAP.keymap -DSHIELD="$shield" -DKEYMAP_VARIANT="$KEYMAP"
   cp "$d/zephyr/zmk.uf2" "$OUTDIR/$out.uf2"
   echo "==> Wrote $OUTDIR/$out.uf2"
 done

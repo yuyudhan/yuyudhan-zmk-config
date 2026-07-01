@@ -18,8 +18,8 @@ build keymap="yuyudhan-1" *targets:
     else echo "==> keymap-drawer not installed; run: pipx install --python python3.12 keymap-drawer==0.23.0"; fi
     dest="$(ls -1td firmware/{{keymap}}/*/ 2>/dev/null | head -1)"; \
     if [ -z "$dest" ]; then echo "==> no firmware dir for {{keymap}} (build produced none); skipped visual snapshot"; else \
-      if [ -f {{keymap}}_keymap.svg ]; then cp {{keymap}}_keymap.svg "$dest"; echo "==> snapshot SVG    -> $dest{{keymap}}_keymap.svg"; fi; \
-      if [ -f {{keymap}}-viewer.html ]; then cp {{keymap}}-viewer.html "$dest"; echo "==> snapshot viewer -> $dest{{keymap}}-viewer.html"; fi; \
+      if [ -f {{keymap}}_keymap.svg ]; then cp {{keymap}}_keymap.svg "$dest"; echo "==> snapshot SVG    -> ${dest}{{keymap}}_keymap.svg"; fi; \
+      if [ -f {{keymap}}-viewer.html ]; then cp {{keymap}}-viewer.html "$dest"; echo "==> snapshot viewer -> ${dest}{{keymap}}-viewer.html"; fi; \
     fi
 
 # Flash the newest built .uf2 for a keymap onto a mounted NICENANO bootloader drive.
