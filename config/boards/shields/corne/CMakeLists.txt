@@ -33,6 +33,21 @@ if(CONFIG_CORNE_CUSTOM_DISPLAY)
   # It is only compiled when CONFIG_CORNE_CUSTOM_DISPLAY=y (see above).
   zephyr_library_sources(src/custom_status_screen.c)
 
+  # Bake the selected keymap variant into the central display as a short label.
+  # KEYMAP_VARIANT is passed by build.sh (e.g. "yuyudhan-2"); take its trailing
+  # digits and prefix "Y" -> "Y2". Fall back to "YX" if unknown / no digits.
+  if(NOT DEFINED KEYMAP_VARIANT)
+    set(KEYMAP_VARIANT "unknown")
+  endif()
+  string(REGEX MATCH "[0-9]+$" _km_num "${KEYMAP_VARIANT}")
+  if(_km_num STREQUAL "")
+    set(_km_label "YX")
+  else()
+    set(_km_label "Y${_km_num}")
+  endif()
+  message(STATUS "Keymap variant label: ${_km_label}")
+  zephyr_library_compile_definitions(KEYMAP_VARIANT_LABEL=${_km_label})
+
 endif()
 
 # Display-blanking toggle behavior: compiled on every half that has a display.
